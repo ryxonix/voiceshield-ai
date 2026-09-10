@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package voiceshield;
+
+// Enterprise/banking integration contract (optional channel).
+service VoiceShield {
+  // Stream raw PCM int16 chunks; returns per-window synthetic scores.
+  rpc AnalyzeChunk(AnalyzeRequest) returns (AnalyzeReply);
+  // One-shot file analysis (base64-encoded wav/pcm).
+  rpc AnalyzeFile(FileRequest) returns (AnalyzeReply);
+}
+
+message AnalyzeRequest {
+  string call_id = 1;
+  bytes pcm_int16 = 2;      // 16 kHz mono little-endian
+  string role = 3;          // adult | child
+  string language = 4;      // en | hi | kn
+}
+
+message FileRequest {
+  string call_id = 1;
+  bytes audio_b64 = 2;      // base64-encoded wav/mp3
+  string role = 3;
+  string language = 4;
+}
+
+message WindowScore {
+  int32 t_ms = 1;
+  float model_prob = 2;
+  float xai_risk = 3;
+  float synthetic_score = 4;
+  bool watermark_hit = 5;
+  string risk_band = 6;
+}
+
+message AnalyzeReply {
+  string call_id = 1;
+  repeated WindowScore scores = 2;
+  string recommendation = 3;
+}
