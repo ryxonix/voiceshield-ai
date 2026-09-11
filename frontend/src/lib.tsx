@@ -1,23 +1,29 @@
 import { useEffect, useRef, useState } from 'react'
 
+function readEnvBaseTrimmed(): string {
+  const env = (import.meta as any).env ?? {}
+  const raw = (env as any).VITE_API_BASE
+  return typeof raw === 'string' ? raw.trim() : ''
+}
+
 export function apiBase(): string {
-  const envBase = (import.meta as any).env?.VITE_API_BASE?.trim() ?? ''
-  if (!envBase) {
+  const base = readEnvBaseTrimmed()
+  if (!base) {
     const { protocol, hostname, port } = window.location
-    if (port === '5173' || port === '4173') return `${protocol}//${hostname}:8000`
+    if (port === '5173' || port === '5174' || port === '4173') return `${protocol}//${hostname}:8000`
     return ''
   }
-  return envBase.replace(/\\/$/, '')
+  return base.replace(/\/$/, '')
 }
 
 export function wsBase(): string {
-  const envBase = (import.meta as any).env?.VITE_API_BASE?.trim() ?? ''
-  if (!envBase) {
+  const wsEnvBase = readEnvBaseTrimmed()
+  if (!wsEnvBase) {
     const { protocol, hostname, port } = window.location
-    if (port === '5173' || port === '4173') return `ws://${hostname}:8000`
+    if (port === '5173' || port === '5174' || port === '4173') return `ws://${hostname}:8000`
     return `${protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`
   }
-  return envBase.replace(/^http/, 'ws').replace(/\\/$/, '')
+  return wsEnvBase.replace(/^http/, 'ws').replace(/\/$/, '')
 }
 
 /** Recharts-free sparkline (SVG polyline) — zero extra deps. */
@@ -39,11 +45,11 @@ export function useLiveSession() {
   const [connected, setConnected] = useState(false)
   const [events, setEvents] = useState<any[]>([])
   const [micActive, setMicActive] = useState(false)
+  const [latency, setLatency] = useState(0)
   const wsRef = useRef<WebSocket | null>(null)
   const audioRef = useRef<{ ctx: AudioContext; stream: MediaStream; proc: ScriptProcessorNode } | null>(null)
   const [shielding, setShielding] = useState(false)
   const [mitigation, setMitigation] = useState<any>(null)
-  const [latency, setLatency] = useState(0)
 
   const setShielded = (on: boolean, mitigationEvent?: any) => {
     setShielding(on)

@@ -1,12 +1,6 @@
 import { useEffect } from 'react'
 
-export function ShieldBanner({
-  mitigation,
-  onDismiss,
-}: {
-  mitigation: any
-  onDismiss?: () => void
-}) {
+export function ShieldBanner({ mitigation, onDismiss }: { mitigation?: any; onDismiss?: () => void }) {
   if (!mitigation) return null
 
   const { action, score, threshold, role, message } = mitigation

@@ -5,30 +5,22 @@ import { useMemo } from 'react'
  *  - Phase Continuity %       : 0..1 → 0..100
  *  - Noise-Floor Dropouts %  : capped + inverted so high dropouts → low score
  */
-export function Radar({
-  ev,
-  pfDropoutsMax = 8,
-}: {
-  ev: any
-  pfDropoutsMax?: number
-}) {
+export function Radar({ ev, pfDropoutsMax = 8 }: { ev: any; pfDropoutsMax?: number }) {
   const p = ev.prosody || {}
-  const pitchStability = p.pitch_stability ?? 0        // already 0..100 from backend
-  const phaseContinuity = clamp01(p.phase_continuity ?? 0.5) * 100
-  const nfDropouts = clamp01((p.noise_floor_dropouts ?? 0) / pfDropoutsMax) * 100
+  const pitchStability = p.pitch_stability ?? 0
+  const phaseContinuity = p.phase_continuity != null ? p.phase_continuity * 100 : 50
+  const nfDropouts = p.noise_floor_dropouts != null ? p.noise_floor_dropouts : 0
   const items = useMemo(
     () => [
       { label: 'Pitch Stability', value: pitchStability, color: '#2563EB' },
       { label: 'Phase Continuity', value: phaseContinuity, color: '#7c5cbf' },
-      { label: 'NF Dropouts', value: 100 - nfDropouts, color: '#b45309' },
+      { label: 'NF Dropouts', value: 100 - Math.min(100, (nfDropouts / pfDropoutsMax) * 100), color: '#b45309' },
     ],
-    [pitchStability, phaseContinuity, nfDropouts],
+    [pitchStability, phaseContinuity, nfDropouts, pfDropoutsMax],
   )
 
-  // radial layout — three axes at 120° spacing
   const cx = 4, cy = 4, R = 3.25
   const angle0 = -Math.PI / 2
-  const fmt = (v: number) => `${v.toFixed(0)}%`
 
   return (
     <div className="space-y-2.5">
@@ -37,7 +29,7 @@ export function Radar({
           <div key={it.label}>
             <div className="flex justify-between text-[12.5px]">
               <span className="text-zinc-800">{it.label}</span>
-              <span className="font-mono text-zinc-500">{fmt(it.value)}</span>
+              <span className="font-mono text-zinc-500">{it.value.toFixed(0)}%</span>
             </div>
             <div className="mt-1 h-[3px] rounded-full bg-[#F1EEE9]">
               <div
@@ -87,7 +79,7 @@ export function Radar({
         <circle cx={cx * 100} cy={cy * 100} r={R * 100} fill="none" stroke="#E4E4E7" strokeWidth="1.5" />
         {items.map((it, i) => {
           const a = angle0 + (2 * Math.PI / items.length) * i
-          const r = (it.value / 100) * R
+          const r = Math.min(1, it.value / 100) * R
           const x = cx + Math.cos(a) * r
           const y = cy + Math.sin(a) * r
           return (
@@ -105,8 +97,4 @@ export function Radar({
       </svg>
     </div>
   )
-}
-
-function clamp01(v: number): number {
-  return Math.max(0, Math.min(1, v))
 }

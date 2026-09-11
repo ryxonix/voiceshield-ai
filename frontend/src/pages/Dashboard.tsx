@@ -7,26 +7,13 @@ import { ShieldBanner } from '../components/ShieldBanner'
 const LANGS = ['en', 'hi', 'kn'] as const
 
 export default function Dashboard({ liveOnly = false, onNavigate }: { liveOnly?: boolean; onNavigate: (v: string) => void }) {
-  const {
-    connected,
-    micActive,
-    events,
-    connect,
-    sendEnd,
-    shielding,
-    mitigation,
-    setShielded,
-  } = useLiveSession()
+  const live = useLiveSession()
   const [role, setRole] = useState<'adult' | 'child'>('adult')
   const [language, setLanguage] = useState<'en' | 'hi' | 'kn'>('en')
   const [speaker, setSpeaker] = useState('')
 
-  const analyses = useMemo(() => events.filter((e: any) => e.type === 'analysis'), [events])
-  const latest = analyses.at(-1)
+  const analyses = useMemo(() => live.events.filter((e: any) => e.type === 'analysis'), [live.events])
   const scores = analyses.map((a: any) => a.synthetic_score ?? 0)
-  const peak = scores.length ? Math.max(...scores) : 0
-  const latency = latest?.latency_ms ?? 0
-  const _latencyUsed = latency >= 0 ? latency.toFixed(0) : '0'
 
   if (liveOnly) {
     return (
@@ -43,15 +30,15 @@ export default function Dashboard({ liveOnly = false, onNavigate }: { liveOnly?:
             </>
           }
           actions={
-            !connected ? (
+            !live.connected ? (
               <button
                 className={btn('btn-primary')}
-                onClick={() => connect({ role, language, speaker })}
+                onClick={() => live.connect({ role, language, speaker })}
               >
                 Start session
               </button>
             ) : (
-              <button className={btn()} onClick={sendEnd}>
+              <button className={btn()} onClick={live.sendEnd}>
                 End session
               </button>
             )
@@ -59,24 +46,13 @@ export default function Dashboard({ liveOnly = false, onNavigate }: { liveOnly?:
         />
         <Divider />
         <LivePanel
-          connected={connected}
-          micActive={micActive}
-          analyses={analyses}
-          latest={latest}
-          scores={scores}
-          peak={peak}
-          events={events}
+          live={live}
           role={role}
           setRole={setRole}
           language={language}
           setLanguage={setLanguage}
           speaker={speaker}
           setSpeaker={setSpeaker}
-          connect={connect}
-          sendEnd={sendEnd}
-          shielding={shielding}
-          mitigation={mitigation}
-          setShielded={setShielded}
         />
       </article>
     )
@@ -177,25 +153,14 @@ export default function Dashboard({ liveOnly = false, onNavigate }: { liveOnly?:
       </p>
       <div className="mt-4">
         <LivePanel
-          compact
-          connected={connected}
-          micActive={micActive}
-          analyses={analyses}
-          latest={latest}
-          scores={scores}
-          peak={peak}
-          events={events}
+          live={live}
           role={role}
           setRole={setRole}
           language={language}
           setLanguage={setLanguage}
           speaker={speaker}
           setSpeaker={setSpeaker}
-          connect={connect}
-          sendEnd={sendEnd}
-          shielding={shielding}
-          mitigation={mitigation}
-          setShielded={setShielded}
+          compact
         />
       </div>
     </article>
@@ -204,30 +169,15 @@ export default function Dashboard({ liveOnly = false, onNavigate }: { liveOnly?:
 
 /* ------------------------------ Live panel --------------------------------- */
 
-function LivePanel({
-  compact = false,
-  connected,
-  micActive,
-  analyses,
-  latest,
-  scores,
-  peak,
-  events,
-  role,
-  setRole,
-  language,
-  setLanguage,
-  speaker,
-  setSpeaker,
-  connect,
-  sendEnd,
-  shielding = false,
-  mitigation = null,
-  setShielded = () => {},
-  _events = events,
-}: any) {
-  const _shieldedDismiss = setShielded
-  const _shieldedDismiss = setShielded
+function LivePanel({ live, role, setRole, language, setLanguage, speaker, setSpeaker, compact = false }: any) {
+  const { connected, micActive, events, latency, shielding, mitigation, setShielded } = live
+  const analyses = useMemo(() => events.filter((e: any) => e.type === 'analysis'), [events])
+  const latest = analyses.at(-1)
+  const scores = analyses.map((a: any) => a.synthetic_score ?? 0)
+  const peak = scores.length ? Math.max(...scores) : 0
+  void scores
+  void setShielded
+
   return (
     <div className={compact ? '' : 'grid gap-6 lg:grid-cols-[280px_1fr]'}>
       {/* Controls */}
@@ -262,12 +212,12 @@ function LivePanel({
           {!connected ? (
             <button
               className="btn-pill btn-primary w-full justify-center"
-              onClick={() => connect({ role, language, speaker })}
+              onClick={() => live.connect({ role, language, speaker })}
             >
               Start live session
             </button>
           ) : (
-            <button className="btn-pill w-full justify-center" onClick={sendEnd}>
+            <button className="btn-pill w-full justify-center" onClick={live.sendEnd}>
               End session
             </button>
           )}
@@ -291,7 +241,7 @@ function LivePanel({
             <div className="flex items-baseline justify-between">
               <h3 className="text-[14px] font-bold text-zinc-900">Score timeline</h3>
               <span className="font-mono text-[12px] text-zinc-500">
-                peak {(peak * 100).toFixed(0)}% · {analyses.length} windows · latency {_latencyUsed} ms
+                peak {(peak * 100).toFixed(0)}% · {analyses.length} windows · latency {latency.toFixed(0)} ms
               </span>
             </div>
             <div className="mt-2">
@@ -318,8 +268,8 @@ function LivePanel({
               <Radar ev={latest} />
             </div>
             {latest?.speaker_mismatch != null && (
-              <p className="mt-3 text-[13px]" style={{ color: latest.speaker_mismatch ? '#DC2626' : '#3f6f4f' }}>
-                {latest.speaker_mismatch
+              <p className="mt-3 text-[13px]" style={{ color: latest?.speaker_mismatch ? '#DC2626' : '#3f6f4f' }}>
+                {latest?.speaker_mismatch
                   ? 'Speaker mismatch — possible impersonation.'
                   : 'Consistent with the enrolled voice.'}
               </p>
@@ -337,14 +287,14 @@ function LivePanel({
           </div>
         </div>
         {shielding && mitigation?.action === 'child_shield' && (
-          <ShieldBanner mitigation={mitigation} onDismiss={() => _shieldedDismiss(false)} />
+          <ShieldBanner mitigation={mitigation} onDismiss={() => setShielded(false)} />
         )}
       </div>
     </div>
   )
 }
 
-function MitigationPanel({ shielding, mitigation, connected, setShielded }: any) {
+function MitigationPanel({ shielding, mitigation, connected, setShielded: _setShielded }: any) {
   if (shielding && mitigation?.action === 'child_shield') {
     return null
   }
@@ -364,18 +314,11 @@ function MitigationPanel({ shielding, mitigation, connected, setShielded }: any)
   )
 }
 
-function Seg({
-  label,
-  options,
-  value,
-  onChange,
-  disabled,
-  upper,
-}: {
+function Seg({ label, options, value, onChange, disabled, upper }: {
   label: string
   options: string[]
   value: string
-  onChange: (v: any) => void
+  onChange: (v: string) => void
   disabled?: boolean
   upper?: boolean
 }) {
@@ -402,12 +345,12 @@ function Seg({
   )
 }
 
-function MiniStat({ label, value, good }: { label: string; value: any; good?: boolean }) {
+function MiniStat({ label, value, good }: { label: string; value: unknown; good?: boolean }) {
   return (
     <div className="rounded-lg bg-[#FAF8F5] px-3 py-2">
       <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">{label}</div>
       <div className="mt-0.5 font-mono text-[13.5px] text-zinc-900" style={good ? { color: '#3f6f4f' } : undefined}>
-        {typeof value === 'number' ? value.toFixed(3) : value}
+        {typeof value === 'number' ? value.toFixed(3) : String(value)}
       </div>
     </div>
   )

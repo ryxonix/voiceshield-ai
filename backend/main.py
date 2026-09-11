@@ -253,7 +253,8 @@ async def analyze_file(role: str = Query("adult"), language: str = Query("en"), 
     """One-shot file analysis: returns per-window scores + fused verdict (REST/SDK path)."""
     import numpy as np
 
-    from .features.prosodic import extract_prosodic_features        from .features.spectral import noise_floor_dropouts, phase_continuity
+    from .features.prosodic import extract_prosodic_features
+    from .features.spectral import noise_floor_dropouts, phase_continuity
 
     from .features.speaker_embedding import extract_speaker_embedding
     from .inference import aasist

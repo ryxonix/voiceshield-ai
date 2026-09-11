@@ -1,28 +1,29 @@
 import { useEffect, useRef, useState } from 'react'
 
-/* ------------------------------- Env helpers ------------------------------- */
-function envBaseTrimmed(): string {
-  return ((import.meta as any).env?.VITE_API_BASE ?? '').trim()
+function readEnvBaseTrimmed(): string {
+  const env = (import.meta as any).env ?? {}
+  const raw = (env as any).VITE_API_BASE
+  return typeof raw === 'string' ? raw.trim() : ''
 }
 
 export function apiBase(): string {
-  const base = envBaseTrimmed()
+  const base = readEnvBaseTrimmed()
   if (!base) {
     const { protocol, hostname, port } = window.location
-    if (port === '5173' || port === '4173') return `${protocol}//${hostname}:8000`
+    if (port === '5173' || port === '5174' || port === '4173') return `${protocol}//${hostname}:8000`
     return ''
   }
-  return base.replace(/\\/$/, '')
+  return base.replace(/\/$/, '')
 }
 
 export function wsBase(): string {
-  const base = envBaseTrimmed()
-  if (!base) {
+  const wsEnvBase = readEnvBaseTrimmed()
+  if (!wsEnvBase) {
     const { protocol, hostname, port } = window.location
-    if (port === '5173' || port === '4173') return `ws://${hostname}:8000`
+    if (port === '5173' || port === '5174' || port === '4173') return `ws://${hostname}:8000`
     return `${protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`
   }
-  return base.replace(/^http/, 'ws').replace(/\\/$/, '')
+  return wsEnvBase.replace(/^http/, 'ws').replace(/\/$/, '')
 }
 
 /* ------------------------------ Button helper ------------------------------ */
@@ -363,13 +364,12 @@ export function useLiveSession(): HookReturn {
       }
     }
 
-    // capture mic → int16 PCM @16 kHz → 100 ms chunks
     navigator.mediaDevices
       ?.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
       .then((stream) => {
         const ctx = new AudioContext({ sampleRate: 16000 })
         const src = ctx.createMediaStreamSource(stream)
-        const proc = ctx.createScriptProcessor(1600, 1, 1) // 100 ms
+        const proc = ctx.createScriptProcessor(1600, 1, 1)
         proc.onaudioprocess = (e) => {
           const f = e.inputBuffer.getChannelData(0)
           const buf = new Int16Array(f.length)
@@ -380,7 +380,7 @@ export function useLiveSession(): HookReturn {
           if (ws.readyState === WebSocket.OPEN) ws.send(buf.buffer)
         }
         src.connect(proc)
-        proc.connect(ctx.destination) // required for ScriptProcessor to fire
+        proc.connect(ctx.destination)
         audioRef.current = { ctx, stream, proc }
         setMicActive(true)
       })

@@ -201,7 +201,7 @@ function FileAnalyzer() {
           <div className="card p-6">
             <div className="grid gap-4 sm:grid-cols-3">
               <Metric label="Peak score" value={`${(result.peak_score * 100).toFixed(0)}%`} />
-              <Metric label="Risk band" value={result.risk_band} capitalize />
+              <Metric label="Risk band" value={result.risk_band} />
               <Metric label="Windows analyzed" value={result.windows_analyzed} />
             </div>
             {scores.length > 0 && (
@@ -216,7 +216,7 @@ function FileAnalyzer() {
   )
 }
 
-/* ------------------------------- Speakers tab ------------------------------ */
+/* ------------------------------- Speakers tab ------------------------------- */
 
 function SpeakerEnroll() {
   const [label, setLabel] = useState('')
@@ -232,7 +232,7 @@ function SpeakerEnroll() {
       body: fd,
     })
     const j = await r.json()
-    setMsg(j.ok ? `Enrolled "${label}" — cross-session consistency checks are now active for this voice.` : `Error: ${j.detail || 'failed'}`)
+    setMsg(j.ok ? `Enrolled \"${label}\" — cross-session consistency checks are now active for this voice.` : `Error: ${j.detail || 'failed'}`)
   }
 
   return (
